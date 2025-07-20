@@ -3,6 +3,7 @@ import requests
 import pandas as pd
 import plotly.express as px
 import matplotlib.pyplot as plt
+from typing import Optional
 from datetime import datetime
 import os
 
@@ -65,6 +66,29 @@ def get_monthly_spend_data():
     except requests.exceptions.RequestException as e:
         st.error(f"Error connecting to API for monthly spend: {e}")
         return None
+
+def search_receipts(keyword: str, start_date: Optional[str], end_date: Optional[str]):
+    """Fetches receipts based on search criteria."""
+    params = {}
+    if keyword:
+        params["keyword"] = keyword
+    if start_date:
+        params["start_date"] = start_date
+    if end_date:
+        params["end_date"] = end_date
+    
+    try:
+        if not params:
+            # Return an empty list if no search parameters are provided, but don't show a warning
+            # This allows the 'Clear Search' to function smoothly
+            return []
+
+        response = requests.get(f"{API_BASE_URL}/receipts/search", params=params)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Error connecting to API: {e}")
+        return []
 
 # --- Main Application UI ---
 local_css("style.css")
@@ -246,19 +270,55 @@ with tab2:
 
 # --- Tab 3: Browse & Search All Receipts ---
 with tab3:
-    st.header("All Processed Receipts")
+    st.header("Browse & Search Receipts")
+
+    # --- Search Form ---
+    st.markdown("#### Search Filters")
+    with st.form(key="search_form"):
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            search_keyword = st.text_input("Search by keyword (vendor, item, etc.)")
+        with c2:
+            search_start_date = st.date_input("Start date", None)
+        with c3:
+            search_end_date = st.date_input("End date", None)
+        
+        search_button = st.form_submit_button(label="🔍 Search")
+        clear_button = st.form_submit_button(label="Clear Search")
+
+    # Initialize session state for search
+    if 'search_active' not in st.session_state:
+        st.session_state.search_active = False
+    if 'search_results' not in st.session_state:
+        st.session_state.search_results = []
+
+    if search_button:
+        st.session_state.search_active = True
+        start_date_str = search_start_date.isoformat() if search_start_date else None
+        end_date_str = search_end_date.isoformat() if search_end_date else None
+        st.session_state.search_results = search_receipts(search_keyword, start_date_str, end_date_str)
+    
+    if clear_button:
+        st.session_state.search_active = False
+        st.session_state.search_results = []
 
     # Sorting options
+    st.markdown("#### Sort Options")
     col_sort1, col_sort2 = st.columns(2)
     with col_sort1:
         sort_by = st.selectbox("Sort by", ["transaction_date", "total_amount", "vendor", "id"], index=0)
     with col_sort2:
         sort_order = st.selectbox("Order", ["desc", "asc"], index=0)
 
-    # Fetch and display data
-    all_receipts = get_all_receipts(sort_by, sort_order)
-    
-    if all_receipts:
+    # Determine which receipts to display
+    if st.session_state.search_active:
+        st.subheader("Search Results")
+        receipts_to_display = st.session_state.search_results
+    else:
+        st.subheader("All Processed Receipts")
+        receipts_to_display = get_all_receipts(sort_by, sort_order)
+
+    if receipts_to_display:
         # Create a header
         header_cols = st.columns([1, 3, 2, 2, 1])
         header_cols[0].write("**ID**")
@@ -269,7 +329,7 @@ with tab3:
 
         st.markdown("---")
 
-        for receipt in all_receipts:
+        for receipt in receipts_to_display:
             col1, col2, col3, col4, col5 = st.columns([1, 3, 2, 2, 1])
             with col1:
                 st.write(receipt['id'])
@@ -291,4 +351,7 @@ with tab3:
                     except requests.exceptions.RequestException as e:
                         st.error(f"API connection error: {e}")
     else:
-        st.info("No receipts found in the database.")
+        if st.session_state.search_active:
+            st.info("No receipts found matching your search criteria.")
+        else:
+            st.info("No receipts found in the database. Use the 'Upload' tab to add some!")

@@ -1,6 +1,6 @@
 # crud.py
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc, asc
+from sqlalchemy import func, desc, asc, or_
 from typing import List, Optional, Dict
 import statistics
 
@@ -48,8 +48,13 @@ def search_receipts(
     query = db.query(models.Receipt)
     
     if keyword:
-        # Pattern-based search using LIKE
-        query = query.filter(models.Receipt.vendor.ilike(f"%{keyword}%"))
+        # Case-insensitive search in both vendor and raw_text
+        query = query.filter(
+            or_(
+                models.Receipt.vendor.ilike(f"%{keyword}%"),
+                models.Receipt.raw_text.ilike(f"%{keyword}%")
+            )
+        )
     
     if start_date:
         # Range-based search

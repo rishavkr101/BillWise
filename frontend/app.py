@@ -46,6 +46,26 @@ def get_summary_data():
         st.error(f"Error connecting to API: {e}")
         return None
 
+def get_stats_data():
+    """Fetches expense statistics from the backend."""
+    try:
+        response = requests.get(f"{API_BASE_URL}/receipts/statistics")
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Error connecting to API for stats: {e}")
+        return None
+
+def get_monthly_spend_data():
+    """Fetches monthly spend data from the backend."""
+    try:
+        response = requests.get(f"{API_BASE_URL}/receipts/monthly-spend")
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Error connecting to API for monthly spend: {e}")
+        return None
+
 # --- Main Application UI ---
 local_css("style.css")
 
@@ -58,6 +78,8 @@ tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "📤 Upload New Receipt", "🔍 B
 with tab1:
     st.header("Spending Analysis Dashboard")
     summary_data = get_summary_data()
+    stats_data = get_stats_data()
+    monthly_spend_data = get_monthly_spend_data()
 
     if summary_data and summary_data['receipt_count'] > 0:
         # --- Filters ---
@@ -79,6 +101,11 @@ with tab1:
             st.markdown('<div class="card metric-card"><h3>Total Spend</h3><p>₹{:.2f}</p></div>'.format(summary_data['total_spend']), unsafe_allow_html=True)
             st.markdown('<div class="card metric-card"><h3>Total Receipts</h3><p>{}</p></div>'.format(summary_data['receipt_count']), unsafe_allow_html=True)
             
+            if stats_data:
+                st.markdown('<div class="card metric-card"><h3>Average Spend (Mean)</h3><p>₹{:.2f}</p></div>'.format(stats_data.get('mean', 0)), unsafe_allow_html=True)
+                st.markdown('<div class="card metric-card"><h3>Median Spend</h3><p>₹{:.2f}</p></div>'.format(stats_data.get('median', 0)), unsafe_allow_html=True)
+                st.markdown('<div class="card metric-card"><h3>Most Frequent Spend (Mode)</h3><p>₹{:.2f}</p></div>'.format(stats_data.get('mode', 0)), unsafe_allow_html=True)
+            
             # --- Vendor Frequency Chart ---
             st.markdown('<div class="card">', unsafe_allow_html=True)
             st.subheader("Vendor Frequency")
@@ -98,7 +125,14 @@ with tab1:
             spend_by_vendor = summary_data.get("spend_by_vendor", {})
             if spend_by_vendor:
                 vendor_spend_df = pd.DataFrame(list(spend_by_vendor.items()), columns=['Vendor', 'Total Spend'])
-                fig = px.pie(vendor_spend_df, values='Total Spend', names='Vendor', title='Overall Vendor Spending Distribution')
+                color_sequence = ["#1ABC9C", "#3498DB", "#F1C40F", "#E67E22", "#9B59B6", "#2C3E50"]
+                fig = px.pie(vendor_spend_df, values='Total Spend', names='Vendor', title='Spend by Vendor', color_discrete_sequence=color_sequence)
+                fig.update_layout(
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    font_color='#E2E8F0',
+                    legend_title_text=''
+                )
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("No vendor data to display.")
@@ -109,15 +143,54 @@ with tab1:
             st.subheader("Top 5 Vendors by Spend")
             if spend_by_vendor:
                 top_5_vendors = vendor_spend_df.nlargest(5, 'Total Spend')
-                
-                fig, ax = plt.subplots()
-                ax.barh(top_5_vendors['Vendor'], top_5_vendors['Total Spend'], color='skyblue')
-                ax.invert_yaxis() # To display the highest at the top
-                ax.set_xlabel('Total Spend (₹)')
-                ax.set_title('Top 5 Vendors by Spend')
-                st.pyplot(fig, use_container_width=True)
+                fig_top_vendors = px.bar(top_5_vendors, x='Total Spend', y='Vendor', orientation='h')
+                fig_top_vendors.update_traces(marker_color='#1ABC9C') # Turquoise bars
+                fig_top_vendors.update_layout(
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    font_color='#E2E8F0',
+                    xaxis_title="Total Spend (₹)",
+                    yaxis_title=""
+                )
+                st.plotly_chart(fig_top_vendors, use_container_width=True)
             else:
-                st.info("No spending data by vendor available.")
+                st.info("No vendor data to display.")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # --- Monthly Spend Trend Chart ---
+        if monthly_spend_data and len(monthly_spend_data) > 1:
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.subheader("Monthly Spend Trend")
+            
+            # Convert to DataFrame and sort
+            monthly_df = pd.DataFrame(list(monthly_spend_data.items()), columns=['Month', 'Total Spend'])
+            monthly_df['Month'] = pd.to_datetime(monthly_df['Month'])
+            monthly_df = monthly_df.sort_values('Month')
+            
+            # Calculate 3-month moving average
+            monthly_df['Moving Average (3M)'] = monthly_df['Total Spend'].rolling(window=3, min_periods=1).mean()
+
+            # Create plot with new 'Deep Ocean' color scheme and dark theme layout
+            fig = px.line(monthly_df, x='Month', y=['Total Spend', 'Moving Average (3M)'], 
+                          title="Monthly Expenditure and Trend", markers=True,
+                          color_discrete_map={
+                              'Total Spend': '#3498DB', # Peter River Blue
+                              'Moving Average (3M)': '#1ABC9C' # Turquoise
+                          })
+            fig.update_layout(
+                yaxis_title="Total Spend (₹)", 
+                legend_title_text='',
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font_color='#E2E8F0'
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.subheader("Monthly Spend Trend")
+            st.info("📈 Not enough data for a trend chart. Please upload receipts from at least two different months.")
             st.markdown('</div>', unsafe_allow_html=True)
 
     else:

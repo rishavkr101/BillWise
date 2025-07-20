@@ -1,0 +1,35 @@
+ZOMATO
+Billed by: Zomato Inc.
+Date: 15/07/2024
+Order #12345
+- Chicken Biryani: 1 x 250.00
+- Coke: 1 x 50.00
+Total Amount: ₹300.00
+
+---
+
+AMAZON
+Store: Amazon
+Billed by: Amazon
+Date: 20-Jul-2024
+Order #54321
+- Echo Dot (4th Gen): 1 x 4499.00
+Grand Total: ₹4499.00
+
+---
+
+BIGBASKET
+Store: BigBasket
+Billed on: 22.07.2024
+- Milk: 2 x 30.00
+- Bread: 1 x 45.00
+Amount Paid: ₹105.00
+
+---
+
+MYNTRA
+Sold by: Myntra Designs Pvt. Ltd.
+Date: 25-Jul-2024
+Order #67890
+- T-Shirt: 1 x 799.00
+Total: ₹799.00

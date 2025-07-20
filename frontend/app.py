@@ -4,6 +4,7 @@ import pandas as pd
 import plotly.express as px
 import matplotlib.pyplot as plt
 from datetime import datetime
+import os
 
 # --- Configuration ---
 st.set_page_config(
@@ -16,7 +17,10 @@ API_BASE_URL = "http://127.0.0.1:8000"
 
 # --- Helper Functions ---
 def local_css(file_name):
-    with open(file_name) as f:
+    # Construct path to be relative to the script's location
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(script_dir, file_name)
+    with open(file_path) as f:
         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
 def get_all_receipts(sort_by="transaction_date", sort_order="desc"):

@@ -1,4 +1,4 @@
-# BillPY - Receipt Processing and Aggregation
+# BillWise - Receipt Processing and Aggregation
 
 BillPY is a full-stack receipt and bill management application that allows users to upload, parse, store, and analyze receipts.
 

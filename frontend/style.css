@@ -1,0 +1,40 @@
+/* style.css */
+
+/* Card styling */
+.card {
+    background-color: #ffffff;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e6e6e6;
+}
+
+/* Metric styling */
+.metric-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.metric-card h3 {
+    font-size: 1.2rem;
+    color: #555;
+    margin-bottom: 5px;
+}
+
+.metric-card p {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
+    margin: 0;
+}
+
+/* Chart titles */
+.st-emotion-cache-183lzff {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+}

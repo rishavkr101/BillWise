@@ -1,0 +1,7 @@
+# requirements-frontend.txt
+streamlit
+requests
+pandas
+plotly
+matplotlib
+pdf2image
